@@ -3,25 +3,21 @@ package com.serenity.reporting;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import net.thucydides.core.guice.Injectors;
 import net.thucydides.core.model.TestOutcome;
 import net.thucydides.core.model.TestResult;
 import net.thucydides.core.model.TestStep;
+import net.thucydides.core.util.EnvironmentVariables;
 
 /**
  * Created by Maria_Akulova on 5/30/2016.
  */
-public class RetryFailedTestStep extends TestStep {
+public class RetryFailedTestStep {
 
-    public void removeScreenshots(TestStep step) {
-        if (0 != step.getChildren().size()) {
-            for (TestStep subStep : step.getChildren()) {
-                removeScreenshots(subStep);
-            }
-        } else if (step.isSuccessful()) {
-            while (step.getScreenshots().size() > 0)
-                step.removeScreenshot(0);
-        }
-    }
+    private static EnvironmentVariables environmentVariables = Injectors.getInjector()
+            .getProvider(EnvironmentVariables.class).get();
+    private final String TAKE_SCREENSHOT_OPTION = environmentVariables.getProperties().getProperty("serenity.take.screenshots",
+            "AFTER_EACH_STEP");
 
     /**
      * recursively failed steps set to ignore
@@ -30,6 +26,11 @@ public class RetryFailedTestStep extends TestStep {
     public void setFailedToIgnore(final List<TestStep> testSteps) {
         testSteps.stream().forEach(step -> {
             step.setResult(TestResult.IGNORED);
+            if ("FOR_FAILURES".equals(TAKE_SCREENSHOT_OPTION)) {
+                while (step.getScreenshots().size() > 0) {
+                    step.removeScreenshot(0);
+                }
+            }
             setFailedToIgnore(getFailedSteps(step));
         });
     }

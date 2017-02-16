@@ -15,9 +15,7 @@ import net.thucydides.core.reports.ReportService;
 import net.thucydides.core.reports.TestOutcomeLoader;
 import net.thucydides.core.reports.TestOutcomes;
 import net.thucydides.core.reports.html.HtmlAggregateStoryReporter;
-import net.thucydides.core.util.EnvironmentVariables;
 
-import org.bouncycastle.util.test.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,8 +24,6 @@ import org.slf4j.LoggerFactory;
  */
 public class RetryFailedTestOutcome {
     private static final Logger LOG = LoggerFactory.getLogger(RetryFailedTestOutcome.class.getSimpleName());
-    private static EnvironmentVariables environmentVariables = Injectors.getInjector()
-            .getProvider(EnvironmentVariables.class).get();
     private File reportDir;
     private RetryFailedTestStep retryFailedTestStep;
 
@@ -41,7 +37,6 @@ public class RetryFailedTestOutcome {
 
         RetryFailedTestOutcome retryFailedTestOutcome = new RetryFailedTestOutcome("target/site/serenity");
         retryFailedTestOutcome.updateResults();
-        retryFailedTestOutcome.removeRedundantScreenshots();
         Injectors.getInjector().getInstance(ExecutorServiceProvider.class).getExecutorService().shutdown();
     }
 
@@ -78,24 +73,7 @@ public class RetryFailedTestOutcome {
         reportService.generateReportsFor(updatedTestOutcome);
     }
 
-    public void removeRedundantScreenshots() throws IOException {
-        List<TestOutcome> updatedTestOutcome = new ArrayList<>();
-        ReportService reportService = new ReportService(reportDir, ReportService.getDefaultReporters());
-        String takeScreenshot = environmentVariables.getProperties().getProperty("serenity.take.screenshots",
-                "FOR_FAILURES");
-
-        for (TestOutcome outcome : getTestOutcomes().getOutcomes()) {
-            for (TestStep step : outcome.getTestSteps()) {
-                if ("FOR_FAILURES".equals(takeScreenshot)) {
-                    retryFailedTestStep.removeScreenshots(step);
-                    updatedTestOutcome.add(outcome);
-                }
-            }
-        }
-        reportService.generateReportsFor(updatedTestOutcome);
-    }
-
-    private void ingoreFailedTestWithExample(TestOutcome outcome) {
+    private void ingoreFailedTestWithExample(final TestOutcome outcome) {
         List<TestStep> failedSteps = retryFailedTestStep.getFailedSteps(outcome);
         if (!retryFailedTestStep.isNeedUpdate(outcome)) {
             failedSteps.remove(failedSteps.size() - 1);
@@ -104,7 +82,7 @@ public class RetryFailedTestOutcome {
         logScenarioUpdate(outcome);
     }
 
-    private void ingoreFailedTest(TestOutcome outcome) {
+    private void ingoreFailedTest(final TestOutcome outcome) {
         for (TestStep testStep : outcome.getTestSteps()) {
             if (retryFailedTestStep.isNeedUpdate(testStep)) { // NOSONAR
                 retryFailedTestStep.setFailedToIgnore(retryFailedTestStep.getFailedSteps(testStep));
@@ -115,7 +93,7 @@ public class RetryFailedTestOutcome {
         logScenarioUpdate(outcome);
     }
 
-    private void logScenarioUpdate(TestOutcome outcome) {
+    private void logScenarioUpdate(final TestOutcome outcome) {
         LOG.info("Scenario updated: " + outcome.getName());
     }
 
